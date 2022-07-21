@@ -16,11 +16,7 @@ class NewmanConfig{
         function parseAndRun(value, index, array) {
             console.log(index)
             console.log(value)
-            if (value.environment == undefined) {
-                NewmanConfig.runCollection(value.collection)
-            } else {
-                NewmanConfig.runCollectionWithEnv(value.collection, value.environment)
-            }
+            NewmanConfig.runCollection(value)
         }
         console.log("!-------------------------------------------------------------------------------------------!")
     }
@@ -41,12 +37,10 @@ class NewmanConfig{
         return './reports/html/'
     }
 
-    static runCollectionWithEnv(collection, environment){
-        // call newman.run to pass `options` object and wait for callback
-        var file_name = collection.split("/")
-        newman.run({
-            collection: require(collection),
-            environment: require(environment),
+    static createRunObject(inputValue){
+        var file_name = inputValue.collection.split("/")
+        var runObject = {
+            collection: require(inputValue.collection),
             reporters: NewmanConfig.reporters_list(),
             reporter: {
                 html: {
@@ -59,32 +53,25 @@ class NewmanConfig{
                     export: NewmanConfig.newman_json_report_path().concat(file_name[file_name.length - 1]).concat('.json')
                 }
             }
-        }, function (err) {
-            if (err) { throw err; }
-            console.log('collection run complete!');
-        });
+        }
+        // Add environment to the run object if it is defined in the "run" object in the feed file
+        if (inputValue.environment != undefined){
+            runObject.environment = require(inputValue.environment)
+        }
+        // Add iterationData to the run object if it is defined in the "run" object in the feed file
+        if (inputValue.iterationData != undefined){
+            runObject.iterationData = inputValue.iterationData
+        }
+
+        return runObject
     }
 
-    static runCollection(collection){
+    static runCollection(inputValue){
         // call newman.run to pass `options` object and wait for callback
-        var file_name = collection.split("/")
-        newman.run({
-            collection: require(collection),
-            reporters: NewmanConfig.reporters_list(),
-            reporter: {
-                html: {
-                    export: NewmanConfig.newman_html_report_path().concat(file_name[file_name.length - 1]).concat('.html') // If not specified, the file will be written to `newman/` in the current working directory.
-                },
-                allure: {
-                    export: NewmanConfig.allure_report_path()
-                },
-                json: {
-                    export: NewmanConfig.newman_json_report_path().concat(file_name[file_name.length - 1]).concat('.json')
-                }
-            }
-        }, function (err) {
+        var runObj = NewmanConfig.createRunObject(inputValue)
+        newman.run(runObj, function (err) {
             if (err) { throw err; }
-            console.log('collection run complete!');
+            console.log('Collection run complete!');
         });
 
     }
